@@ -66,18 +66,16 @@ export const checkUser: Middleware = async (req, _res, next) => {
     // lowercasing expression in the IDP — surprising in both cases.
     const qb = userRepository.createQueryBuilder('user');
 
-    if (
-      hasUserHeader &&
-      hasEmailHeader &&
-      userValue !== '' &&
-      emailValue !== ''
-    ) {
-      // email & user header was specified so we must verify both
-      qb.where(
-        '(LOWER(user.jellyfinUsername) = LOWER(:user) OR LOWER(user.plexUsername) = LOWER(:user)) AND LOWER(user.email) = LOWER(:email)',
-        { user: userValue, email: emailValue }
-      );
-      user = await qb.getOne();
+    if (hasUserHeader && hasEmailHeader) {
+      // Both headers are configured, so BOTH must match. Do not fall through
+      // to single-field matching.
+      if (userValue !== '' && emailValue !== '') {
+        qb.where(
+          '(LOWER(user.jellyfinUsername) = LOWER(:user) OR LOWER(user.plexUsername) = LOWER(:user)) AND LOWER(user.email) = LOWER(:email)',
+          { user: userValue, email: emailValue }
+        );
+        user = await qb.getOne();
+      }
     } else if (hasUserHeader && userValue !== '') {
       qb.where(
         'LOWER(user.jellyfinUsername) = LOWER(:user) OR LOWER(user.plexUsername) = LOWER(:user)',
